@@ -1,17 +1,28 @@
 name: Node.js Package
 
 on:
-  release:
-    types: [created]
-
+  push: ~
+  pull_request: ~
+  schedule:
+    - cron: '0 12 * * *'
+      
 jobs:
   build:
-    runs-on: ubuntu-latest
+    
+    strategy:
+     fail-fast: false
+     matrix:
+       node-version: [12.x, 14.x]
+       os: ['ubuntu-latest', 'windows-latest']
+
+    runs-on: ${{ matrix.os }}
+    
     steps:
       - uses: actions/checkout@v2
+      - name: Use Node.js ${{ matrix.node-version }}
       - uses: actions/setup-node@v1
         with:
-          node-version: 12
+          node-version: ${{ matrix.node-version }}
       - run: npm ci
       - run: npm run clean && npm run lint && npm run build
 
