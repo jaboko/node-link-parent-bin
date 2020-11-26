@@ -36,6 +36,10 @@ jobs:
           registry-url: https://registry.npmjs.org/
       - run: npm ci
       - run: npm run clean && npm run lint && npm run build
-      - uses: release-drafter/release-drafter@v5
+        uses: release-drafter/release-drafter@v5
+        with:
+          config-name: release-drafter.yaml
+          publish: false
+          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
