@@ -5,6 +5,7 @@ import * as link from './link';
 import * as minimatch from 'minimatch';
 import { Options } from './program';
 import { FSUtils } from './FSUtils';
+import { getBinPath } from 'get-bin-path';
 
 export interface Dictionary {
   [name: string]: string;
@@ -25,18 +26,27 @@ export class ParentBinLinker {
     this.log = log4js.getLogger('ParentBinLinker');
   }
 
+  private async resolveBinPath(cwd?: string) {
+    return (
+      (await getBinPath({
+        cwd: cwd,
+      })) ?? path.join(cwd ?? '', 'node_modules', '.bin')
+    );
+  }
+
+  private async resolveModulePath(cwd?: string) {
+    return path.join(await this.resolveBinPath(cwd), '..');
+  }
+
   private async linkBin(
     binName: string,
     from: string,
     childPackage: string,
   ): Promise<link.LinkResult> {
-    const to = path.join(
-      this.options.childDirectoryRoot,
-      childPackage,
-      'node_modules',
-      '.bin',
-      binName,
+    const binPath = await this.resolveBinPath(
+      path.join(this.options.childDirectoryRoot, childPackage),
     );
+    const to = path.join(binPath, binName);
     this.log.debug('Creating link at %s for command at %s', to, from);
     return link.link(from, to);
   }
@@ -55,12 +65,8 @@ export class ParentBinLinker {
 
     const results = await Promise.all(
       dependenciesToLink.map(async (dependency) => {
-        const moduleDir = path.join('node_modules', dependency);
-        const packageFile = path.join(
-          'node_modules',
-          dependency,
-          'package.json',
-        );
+        const moduleDir = await this.resolveModulePath();
+        const packageFile = path.join(moduleDir, dependency, 'package.json');
         try {
           const content = await fs.readFile(packageFile);
           const pkg: PackageJson = JSON.parse(content.toString());
